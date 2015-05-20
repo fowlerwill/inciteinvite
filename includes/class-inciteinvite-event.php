@@ -265,9 +265,11 @@ class InciteInvite_Event {
         if(!$date instanceof DateTime) {
             $date = new DateTime($date, new DateTimeZone(InciteInvite_Team::get_team_timezone($team_id)));
         }
+        // Summary Premption Time
+        $date->sub(new DateInterval('P1D'));
+        wp_schedule_single_event($date->format('U'), 'sendsummaryemail', array($team_id, $eventid));
         // Invitation Premption Time
-        $date->sub(new DateInterval('P3D'));
-
+        $date->sub(new DateInterval('P2D'));
         wp_schedule_single_event($date->format('U'), 'sendinviteemail', array($team_id, $eventid));
     }
 
@@ -466,7 +468,7 @@ class InciteInvite_Event {
 }
 
 /**
- * cron jobs require non OO hooks :/
+ * Send Invitation Email
  */
 function send_the_invite_email($team_id, $event_id) {
 //    error_log("\n" . get_the_title($team_id), 3, '/var/tmp/wperror.log');
@@ -490,3 +492,42 @@ function send_the_invite_email($team_id, $event_id) {
     }
 }
 add_action( 'sendinviteemail', 'send_the_invite_email', 10, 2 );
+
+/**
+ * Send Summary email
+ */
+function send_the_summary_email($team_id, $event_id) {
+//    error_log("\n" . get_the_title($team_id), 3, '/var/tmp/wperror.log');
+    $team_name = get_the_title($team_id);
+    $bcc = InciteInvite_Team::get_all_members($team_name);
+    $event = get_post($event_id);
+    $iievent_date = get_post_meta($event_id, 'iievent_date', true);
+    $attendance = get_post_meta($event_id, 'iievent_attendance', true);
+    $attendanceInfo = '';
+    $headers = array();
+
+
+    foreach($bcc as $member) {
+        $headers[] = "Bcc: " . $member->get('user_email');
+        // grab the attendance info while we're here.
+        if( array_key_exists($member->ID, $attendance) ) {
+            $attendanceInfo .="\n- " . $member->display_name . ": " . $attendance[$member->ID];
+        } else {
+            $attendanceInfo .= "\n- " . $member->display_name . ": no response.";
+        }
+
+    }
+
+    $message = "Here's a summary of the invitations to: " . $event->post_title;
+    // include list of those in, out, & non-responders
+
+    $message .= $attendanceInfo;
+
+    $message .= "\nEvent Information: ";
+    $message .= "\n" . $event->post_content;
+    $message .= "\nThe event takes place: " . $iievent_date->format('l jS \of F Y h:i A');
+    $message .= "\n and will last: " . get_post_meta($event_id, 'iievent_duration', true) . "hrs";
+
+    wp_mail('', "Here's whats happening at: " . $event->post_title, $message, $headers);
+}
+add_action( 'sendsummaryemail', 'send_the_summary_email', 10, 2 );
