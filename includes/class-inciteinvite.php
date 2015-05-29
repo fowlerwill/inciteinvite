@@ -242,6 +242,7 @@ class InciteInvite {
         $this->loader->add_filter('wp_mail_from_name', $this, 'mail_from_name');
 		$this->loader->add_action( 'init', $this->team, 'register_type' );
 		$this->loader->add_filter( 'wp_nav_menu_items', $this->team, 'add_team_button', 10, 2 );
+
 		$this->loader->add_action( 'init', $this->event, 'register_type' );
 		$this->loader->add_action( 'template_redirect', $this->event, 'update_attendance' );
 		$this->loader->add_filter( 'the_content', $this->event, 'show_event_info' );
@@ -262,10 +263,17 @@ class InciteInvite {
 //        $this->loader->add_action( 'template_redirect', $user, 'register_new_user' );
         $this->loader->add_action( 'template_redirect', $user, 'redirect_if_not_their_team' );
 //        $this->loader->add_action( 'init', $user, 'remove_logged_in_user');
+        $this->loader->add_action( 'after_setup_theme', $user, 'disable_admin_bar');
+        $this->loader->add_action( 'admin_init', $user, 'redirect_admin_dashboard');
+
         $this->loader->add_filter( 'registration_errors', $user, 'validate_team_field', 10, 3 );
         $this->loader->add_filter( 'user_register', $user, 'save_user_meta', 10, 3 );
         $this->loader->add_filter( 'pre_option_default_role', $user, 'set_user_default_role', 10, 1 );
         $this->loader->add_filter( 'the_content', $user, 'render_team_page');
+        $this->loader->add_filter( 'wp_nav_menu_items', $user, 'add_login_button', 10, 2 );
+
+        $this->loader->add_shortcode('iirender_login_form', $user, 'render_login_form');
+
     }
 
     /**

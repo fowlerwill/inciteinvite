@@ -41,6 +41,26 @@ class InciteInvite_TeamUser {
 
     }
 
+    /**
+     * Add the Login/Logout & Register buttons to the navigation
+     * @param $items
+     * @param $args
+     * @return string
+     */
+    public function add_login_button($items, $args) {
+
+        if ($args->theme_location == 'main_nav') {
+            // give logout button
+            if( is_user_logged_in() ) {
+                $items .= '<li class="menu-item"><a href="' . wp_logout_url( site_url() ) . '">Logout</a></li>';
+            } else {
+                $loginandregpage = get_page_by_title('register');
+                $items .= '<li class="menu-item"><a href="' . get_permalink($loginandregpage->ID) . '">Login/Register</a></li>';
+            }
+        }
+        return $items;
+    }
+
     private function overwrite_registration_email() {
         // Redefine user notification function
         if ( !function_exists('wp_new_user_notification') ) {
@@ -236,6 +256,32 @@ class InciteInvite_TeamUser {
 //        wp_die(wp_verify_nonce( $_REQUEST['_wpnonce'], 'cu_'.$this->role));
         if(!isset($_REQUEST['_wpnonce'])) { return; }
         return wp_verify_nonce( $_REQUEST['_wpnonce'], 'cu_'.$this->role);
+    }
+
+    public function render_login_form() {
+        if( is_user_logged_in() ) {
+            return '';
+        }
+        return wp_login_form( array( 'echo' => false ) );
+    }
+
+    /**
+     * Keep the baddies out of the admin dashboard.
+     */
+    public function redirect_admin_dashboard() {
+        if( !current_user_can('edit_others_pages') ) {
+            wp_redirect( site_url() );
+            exit;
+        }
+    }
+
+    /**
+     * Turn off the admin bar for all except the administrator.
+     */
+    public function disable_admin_bar() {
+        if( !current_user_can('edit_others_pages') ) {
+            add_filter('show_admin_bar', '__return_false');
+        }
     }
 
     /**
