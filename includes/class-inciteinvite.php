@@ -263,6 +263,8 @@ class InciteInvite {
 //        $this->loader->add_action( 'template_redirect', $user, 'register_new_user' );
         $this->loader->add_action( 'template_redirect', $user, 'redirect_if_not_their_team' );
 //        $this->loader->add_action( 'init', $user, 'remove_logged_in_user');
+        $this->loader->add_action( 'init', $user, 'delete_user');
+
         $this->loader->add_action( 'after_setup_theme', $user, 'disable_admin_bar');
         $this->loader->add_action( 'admin_init', $user, 'redirect_admin_dashboard');
 

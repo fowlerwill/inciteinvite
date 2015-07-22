@@ -223,6 +223,7 @@ class InciteInvite_Event {
             'ping_status'    => 'closed',
             'comment_status' => 'closed',
             'post_author'    => get_current_user_id(),
+            'post_parent'   => $iiteam_id,
             'post_title'    => $iievent_title,
             'post_content'  => $iievent_description,
         );
@@ -263,14 +264,17 @@ class InciteInvite_Event {
         $date = get_post_meta($eventid, 'iievent_date', true);
         $team_id = $this->get_event_team_id($eventid);
         if(!$date instanceof DateTime) {
-            $date = new DateTime($date, new DateTimeZone(InciteInvite_Team::get_team_timezone($team_id)));
+            // check if it's a unix timestamp
+            if( is_numeric($date) && (int)$date == $date ) {
+                $date = new DateTime('@' . $date);
+            }
         }
         // Summary Premption Time
         $date->sub(new DateInterval('P1D'));
-        wp_schedule_single_event($date->format('U'), 'sendsummaryemail', array($team_id, $eventid));
+        wp_schedule_single_event($date->getTimestamp(), 'sendsummaryemail', array($team_id, $eventid));
         // Invitation Premption Time
         $date->sub(new DateInterval('P2D'));
-        wp_schedule_single_event($date->format('U'), 'sendinviteemail', array($team_id, $eventid));
+        wp_schedule_single_event($date->getTimestamp(), 'sendinviteemail', array($team_id, $eventid));
     }
 
     public function update_event($iievent_id, $iievent_title, $iievent_description, $iievent_date, $iievent_duration,
@@ -348,6 +352,9 @@ class InciteInvite_Event {
      * @return bool                 true if successful
      */
     private function save_date_and_duration($event_id, $iievent_date, $iievent_duration) {
+        if( $iievent_date instanceof DateTime ) {
+            $iievent_date = $iievent_date->getTimestamp();
+        }
         if( get_post_meta($event_id, 'iievent_date', true) ) {
             delete_post_meta($event_id, 'iievent_date');
         }
@@ -378,8 +385,11 @@ class InciteInvite_Event {
         $events = array();
         $args = array(
             'post_type'     => 'iievent',
-            'meta_key'      => 'iiteam_id',
-            'meta_value'    => $teamid
+            'meta_key'      => 'iievent_date',
+            'post_parent'   => $teamid,
+            'orderby'       => 'meta_value_num',
+            'order'         => 'ASC',
+            'nopaging'      => true
         );
         $query = new WP_Query( $args );
 
@@ -387,6 +397,10 @@ class InciteInvite_Event {
             $query->the_post();
             $iievent_id = get_the_ID();
             $date = get_post_meta($iievent_id, 'iievent_date', true);
+            if( !$date instanceof DateTime ) {
+                $date = new DateTime('@'.$date);
+                $date->setTimezone( new DateTimeZone(InciteInvite_Team::get_team_timezone($teamid)) );
+            }
 
             $events[] = array(
                 'iievent_id'            => $iievent_id,
@@ -477,7 +491,10 @@ function send_the_invite_email($team_id, $event_id) {
     $event = get_post($event_id);
 
     $iievent_date = get_post_meta($event_id, 'iievent_date', true);
-
+    if( !$iievent_date instanceof DateTime) {
+        $iievent_date = new DateTime('@' . $iievent_date);
+        $iievent_date->setTimezone( new DateTimeZone(InciteInvite_Team::get_team_timezone($team_id)) );
+    }
     foreach($bcc as $member) {
         $user_email = $member->get('user_email');
         $message = "You've been invited to the event: " . $event->post_title;
@@ -488,6 +505,9 @@ function send_the_invite_email($team_id, $event_id) {
             . get_permalink($event->ID) . '?member=' . $member->ID . '&response=in';
         $message .= "\n if you're unable to make it, please click this link: "
             . get_permalink($event->ID) . '?member=' . $member->ID . '&response=out';
+        $message .= "\n\nif you would like to unsubscribe from this team and all emails from InciteInvite.com Please click this link: "
+            . get_site_url() . '?member=' . $member->ID . '&unsub=' . $member->get('iiunsub_link');
+
         wp_mail($user_email, "You're invited to: " . $event->post_title, $message);
     }
 }
@@ -511,6 +531,7 @@ function send_the_summary_email($team_id, $event_id) {
         $headers[] = "Bcc: " . $member->get('user_email');
         // grab the attendance info while we're here.
         if( array_key_exists($member->ID, $attendance) ) {
+            if($attendance[$member->ID] == 'in')
             $attendanceInfo .="\n- " . $member->display_name . ": " . $attendance[$member->ID];
         } else {
             $attendanceInfo .= "\n- " . $member->display_name . ": no response.";

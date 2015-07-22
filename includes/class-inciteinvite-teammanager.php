@@ -203,6 +203,10 @@ class InciteInvite_TeamManager extends InciteInvite_TeamUser {
         include plugin_dir_path( __FILE__ ) . '../views/view-inciteinvite-teammanager-event-edit.php';
     }
 
+    /**
+     * Collect the events in chronological order
+     * @return string
+     */
     private function collect_and_echo_event_forms() {
         ob_start();
         printf("<h3>%s</h3>", _x("Team Events", 'inciteinvite'));

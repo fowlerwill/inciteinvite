@@ -117,13 +117,34 @@ class InciteInvite_TeamUser {
      * Cannot be tested programmatically
      * TODO: Make user settings page with button that links to $_SERVER['HTTP_REFERER'] . '?DelAcct=yes'
      */
-//    public function remove_logged_in_user() {
-//        if(is_user_logged_in() && $_GET['DelAcct'] == 'yes') {
-//            require_once(ABSPATH.'wp-admin/includes/user.php' );
-//            $current_user = wp_get_current_user();
-//            return wp_delete_user( $current_user->ID );
-//        }
-//    }
+    public function remove_logged_in_user() {
+        if(is_user_logged_in() && $_GET['DelAcct'] == 'yes') {
+            require_once(ABSPATH.'wp-admin/includes/user.php' );
+            $current_user = wp_get_current_user();
+            return wp_delete_user( $current_user->ID );
+        }
+    }
+
+    /**
+     * Delete a user
+     */
+    public function delete_user() {
+        if(!empty($_GET['member']) && !empty($_GET['unsub']) ) {
+            $memberid = $_GET['member'];
+            $unsub = $_GET['unsub'];
+            if( !empty($memberid) && !empty($unsub) ) {
+                $user = get_user_by('id', $memberid);
+                if( $user ) {
+                    $reallink = $user->get('iiunsub_link');
+                    if($reallink == $unsub) {
+                        require_once(ABSPATH.'wp-admin/includes/user.php' );
+                        wp_delete_user($user->ID);
+                        wp_die('You have successfully unsubscribed');
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Set the users that are registering as a iiteam_manager by default
@@ -227,6 +248,8 @@ class InciteInvite_TeamUser {
         if( !InciteInvite_Team::team_exists($teamname) ) {
             $teamPage = InciteInvite_Team::createTeamPage($user_id, $teamname);
         }
+        // Add an unsub hash for the user to be added to links for deletion
+        update_user_meta($user_id, 'iiunsub_link', md5($user_id . $teamname));
 
         $this->save_user_team($user_id, $teamname);
     }
