@@ -204,24 +204,90 @@ class InciteInvite_TeamManager extends InciteInvite_TeamUser {
     }
 
     /**
-     * Collect the events in chronological order
+     * Collect and echo the events in chronological order for the given month
+     * @param DateTime $date - the date to start from.
      * @return string
      */
-    private function collect_and_echo_event_forms() {
+    private function collect_and_echo_event_forms($date) {
         ob_start();
-        printf("<h3>%s</h3>", _x("Team Events", 'inciteinvite'));
-        printf("<h4>%s</h4>", _x("Add a new event", 'inciteinvite'));
+//        printf("<h3>%s</h3>", _x("Team Events", 'inciteinvite'));
+//        printf("<h4>%s</h4>", _x("Add a new event", 'inciteinvite'));
         $this->echo_edit_event_form();
+        $newEvent = ob_get_contents();
+        ob_end_clean();
 
+        ob_start();
         $events = InciteInvite_Event::get_all_events($this->get_users_team());
 
-        if( !empty($events) ) {
-            foreach($events as $event) {
-                $this->echo_edit_event_form($event['iievent_id'], $event['iievent_title'],
-                    $event['iievent_description'], $event['iievent_date'], $event['iievent_duration']);
-            }
-        }
 
+        //loop through the given month
+        $date->modify($date->format('Y-m') . '-01');
+
+        $nextMonth = new DateTime( $date->format('Y-m-t'), $date->getTimezone() );
+        $nextMonth->add( new DateInterval('P1D') );
+
+        $prevMonth = new DateTime( $date->format('Y-m-d'), $date->getTimezone() );
+        $prevMonth->sub( new DateInterval('P1M') );
+
+        echo '<div class="row nopadding">';
+
+        echo '<div class="page-header">
+                <div class="col-xs-8">
+                  <h1>Team Events for ' . $date->format('F, Y') . '</h1>
+                </div>
+                <div class="col-xs-4">
+                    <nav>
+                        <ul class="pager">
+                            <li><a href="' . get_the_permalink() . '?mo='
+            . $prevMonth->format('Ymd') . '">Last month</a></li>
+                            <li><a href="' . get_the_permalink() . '?mo='
+            . $nextMonth->format('Ymd') . '">Next month</a></li>
+                        </ul>
+                    </nav>
+                    ' . $newEvent . '
+                </div>
+              </div>';
+
+        $date->sub( new DateInterval('P' . $date->format('N') . 'D'));              // sub days so we start at beginning of week
+
+        while ($date <= $nextMonth) {
+
+            $eventsThisDay = array();
+            if( !empty($events) ) {
+                foreach($events as $i => $event) {
+                    $tomorrow = new DateTime( $date->format('Y-m-d'), $date->getTimezone() );
+                    $tomorrow->add( new DateInterval('P1D') );
+                    if( $event['iievent_date'] > $date && $event['iievent_date'] < $tomorrow ) {
+                        $eventsThisDay[] = $event;
+                        unset( $events[$i] );
+                    }
+                }
+            }
+            $hidden = (count($eventsThisDay) == 0 ) ? "hidden-xs" : "";
+
+            echo '<div class="col-md-cust nopadding ' . $hidden .'">
+                        <div class="panel panel-default iievent_day" data-date="' . $date->format('Y/m/d ') . '12:00">
+                        <div class="panel-heading">
+                            <h3 class="panel-title text-right">' . $date->format('d') . '</h3>
+                        </div>
+                        <div class="panel-body">
+                            ';
+
+            foreach( $eventsThisDay as $event ) {
+                $this->echo_edit_event_form($event['iievent_id'], $event['iievent_title'],
+                    $event['iievent_description'], $event['iievent_date']->format("Y/m/j G:i"), $event['iievent_duration']);
+            }
+
+            echo '
+                        </div>
+                    </div>
+                </div>';
+            if( $date->format('N') == 6 ) {
+                echo '</div><div class="row nopadding">';
+            }
+            $date->add( new DateInterval('P1D') );
+        }
+        echo '</div>';
         return ob_get_clean();
     }
 
@@ -230,60 +296,12 @@ class InciteInvite_TeamManager extends InciteInvite_TeamUser {
      * @param $content  string|html page content.
      * @return string   string|html updated page content.
      */
-    public function render_edit_team($content) {
-        $content .= '<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">';
-        $content .= '
-            <div class="panel panel-default">
-                <div class="panel-heading" role="tab" id="headingOne">
-                    <h4 class="panel-title">
-                        <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                    Edit Events
-                    </a>
-                    </h4>
-                </div>
-                <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-                    <div class="panel-body">
-                    ' . $this->collect_and_echo_event_forms() . '
-                    </div>
-                </div>
-            </div>
-        ';
+    public function render_edit_team($content, $date) {
 
-        $content .= '
-            <div class="panel panel-default">
-                <div class="panel-heading" role="tab" id="headingTwo">
-                    <h4 class="panel-title">
-                        <a class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    Edit Team Members
-                    </a>
-                    </h4>
-                </div>
-                <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
-                    <div class="panel-body">
-                    ' . $this->collect_and_echo_member_forms() . '
-                    </div>
-                </div>
-            </div>
-        ';
-
-        $content .= '
-            <div class="panel panel-default">
-                <div class="panel-heading" role="tab" id="headingThree">
-                    <h4 class="panel-title">
-                        <a class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    Edit Team Details
-                    </a>
-                    </h4>
-                </div>
-                <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
-                    <div class="panel-body">
-                    ' . $this->build_edit_team_form() . '
-                    </div>
-                </div>
-            </div>
-        ';
-
-        $content .= '</div>';
+        ob_start();
+        include plugin_dir_path( __FILE__ ) . '../views/view-inciteinvite-teammanager-dashboard.php';
+        $content .= ob_get_contents();
+        ob_end_clean();
 
         return $content;
     }

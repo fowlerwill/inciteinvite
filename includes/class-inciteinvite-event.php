@@ -406,7 +406,7 @@ class InciteInvite_Event {
                 'iievent_id'            => $iievent_id,
                 'iievent_title'         => get_the_title(),
                 'iievent_description'   => get_the_content(),
-                'iievent_date'          => $date->format("Y/m/j G:i"),
+                'iievent_date'          => $date,
                 'iievent_duration'      => get_post_meta($iievent_id, 'iievent_duration', true),
             );
         }

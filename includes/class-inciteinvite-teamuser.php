@@ -398,8 +398,18 @@ class InciteInvite_TeamUser {
         if(get_post_type() == 'iiteam' && is_user_logged_in()) {
             $theUser = wp_get_current_user();
             if(in_array('iiteam_manager', $theUser->roles)) {
+
+                //get the daterange requested
+                if( !empty($_GET['mo']) && preg_match('/^\d{8}$/', $_GET['mo']) ) {
+                    $date = DateTime::createFromFormat('Ymd',$_GET['mo'],
+                        new DateTimeZone( InciteInvite_Team::get_team_timezone( get_the_ID() )));
+                } else {
+                    $date = new DateTime('now',
+                        new DateTimeZone( InciteInvite_Team::get_team_timezone( get_the_ID() )));
+                }
+                $date->setTime(0,1);
                 $manager = new InciteInvite_TeamManager();
-                return $manager->render_edit_team($content);
+                return $manager->render_edit_team($content, $date);
             } elseif(in_array('iiteam_member', $theUser->roles)) {
                 return $content . ' <br>Member functions coming soon!';
             } else {

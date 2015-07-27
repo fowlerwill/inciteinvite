@@ -3,9 +3,32 @@
  * included in this file.
  */
 
+.iievent_day .panel-body {
+    padding-left: 0;
+    padding-right: 0;
+    height: 10vh;
+}
 .form-control-full {
     border: 1px dashed #dddddd !important;
     border-radius: 0 !important;
     box-shadow: unset !important;
+}
 
+.nopadding {
+    padding: 0 !important;
+}
+.panel-heading .iievent_create_button {
+    position: absolute;
+}
+.iievent_button {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+@media all and (min-width: 769px){
+    .col-md-cust {
+        width: 14.28%;
+        float: left;
+    }
 }

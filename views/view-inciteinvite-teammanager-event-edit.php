@@ -2,16 +2,16 @@
 <!-- Then on devices > than md, have the event collapse to a 1 col wide piece of a calendar. col-md-1  -->
 <!-- When the event is selected, it can pop up a modal with the below form populated with the below form -->
 
-<div class="col-xs-12 col-md-1">
     <?php if( empty($iievent_id) ): ?>
-        <button class="button button-small iievent_button iievent_create_button"
-                data-modal="iievent_modal_new"><i class="icon icon-plus"></i> Add Event </button>
+        <button class="button btn-block btn-primary iievent_button iievent_create_button"
+                data-modal="iievent_modal_new"><span class="glyphicon glyphicon-plus"></span> Add Event </button>
     <?php else: ?>
-        <div class="alert alert-info" role="alert"><?= $iievent_date; ?></div>
-        <button class="button button-small iievent_button iievent_edit_button"
-                data-modal="iievent_modal_<?= $iievent_id; ?>" id="iievent_id_<?= $iievent_id; ?>"><?= $iievent_title; ?></button>
+        <button class="button btn-block btn-success iievent_button iievent_edit_button"
+                data-modal="iievent_modal_<?= $iievent_id; ?>" id="iievent_id_<?= $iievent_id; ?>">
+            <span class="glyphicon glyphicon glyphicon-ok"></span>
+            <?= $iievent_title; ?>
+        </button>
     <?php endif; ?>
-</div>
 
 <div id="iievent_modal_<?= ( empty($iievent_id) ) ? 'new' : $iievent_id; ?>" class="modal fade">
     <form class="iiteamevent_edit" action="" method="post">
