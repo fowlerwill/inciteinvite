@@ -18,6 +18,11 @@ class InciteInvite_Event {
         $duration = get_post_meta(get_the_ID(), 'iievent_duration', true);
         $attendance = get_post_meta(get_the_ID(), 'iievent_attendance', true);
 
+        if( is_numeric($date) && (int)$date == $date ) {
+            $date = new DateTime('@' . $date,
+                new DateTimeZone(InciteInvite_Team::get_team_timezone(wp_get_post_parent_id(get_the_ID()))));
+        }
+
         $inCount = 0;
         $outCount = 0;
         foreach($attendance as $response) {
@@ -498,9 +503,9 @@ function send_the_invite_email($team_id, $event_id) {
     foreach($bcc as $member) {
         $user_email = $member->get('user_email');
         $message = "You've been invited to the event: " . $event->post_title;
-        $message .= "\n" . $event->post_content;
-        $message .= "\nThe event takes place: " . $iievent_date->format('l jS \of F Y h:i A');
-        $message .= "\n and will last: " . get_post_meta($event_id, 'iievent_duration', true) . "hrs";
+        $message .= "\n\n" . $event->post_content;
+        $message .= "\n\nThe event takes place: " . $iievent_date->format('l jS \of F Y h:i A');
+        $message .= " and will last: " . get_post_meta($event_id, 'iievent_duration', true) . "hrs";
         $message .= "\n if you're going to attend, please click this link: "
             . get_permalink($event->ID) . '?member=' . $member->ID . '&response=in';
         $message .= "\n if you're unable to make it, please click this link: "
@@ -522,19 +527,37 @@ function send_the_summary_email($team_id, $event_id) {
     $bcc = InciteInvite_Team::get_all_members($team_name);
     $event = get_post($event_id);
     $iievent_date = get_post_meta($event_id, 'iievent_date', true);
+    if( !$iievent_date instanceof DateTime) {
+        $iievent_date = new DateTime('@' . $iievent_date);
+        $iievent_date->setTimezone( new DateTimeZone(InciteInvite_Team::get_team_timezone($team_id)) );
+    }
+
     $attendance = get_post_meta($event_id, 'iievent_attendance', true);
     $attendanceInfo = '';
     $headers = array();
 
+    $thoseIn = "";
+    $inCount = 0;
+    $thoseOut = "";
+    $outCount = 0;
+    $thoseNR = "";
+    $nRCount = 0;
 
     foreach($bcc as $member) {
         $headers[] = "Bcc: " . $member->get('user_email');
+
         // grab the attendance info while we're here.
         if( array_key_exists($member->ID, $attendance) ) {
-            if($attendance[$member->ID] == 'in')
-            $attendanceInfo .="\n- " . $member->display_name . ": " . $attendance[$member->ID];
-        } else {
-            $attendanceInfo .= "\n- " . $member->display_name . ": no response.";
+            if($attendance[$member->ID] == 'in') {
+                $inCount++;
+                $thoseIn .="\n" . $inCount . ". " . $member->display_name . ": " . $attendance[$member->ID];
+            } else if($attendance[$member->ID] == 'out') {
+                $outCount++;
+                $thoseOut .= "\n" . $outCount . ". " . $member->display_name . ": no response.";
+            } else {
+                $nRCount++;
+                $thoseNR .= "\n" . $nRCount . ". " . $member->display_name . ": no response.";
+            }
         }
 
     }
@@ -542,12 +565,17 @@ function send_the_summary_email($team_id, $event_id) {
     $message = "Here's a summary of the invitations to: " . $event->post_title;
     // include list of those in, out, & non-responders
 
-    $message .= $attendanceInfo;
+    $message .= "\n\nThose that are IN\n";
+    $message .= $thoseIn;
+    $message .= "\n\nThose that are Out\n";
+    $message .= $thoseOut;
+    $message .= "\n\nThose that did not respond.\n";
+    $message .= $thoseNR;
 
     $message .= "\nEvent Information: ";
-    $message .= "\n" . $event->post_content;
-    $message .= "\nThe event takes place: " . $iievent_date->format('l jS \of F Y h:i A');
-    $message .= "\n and will last: " . get_post_meta($event_id, 'iievent_duration', true) . "hrs";
+    $message .= "\n\n" . $event->post_content;
+    $message .= "\n\nThe event takes place: " . $iievent_date->format('l jS \of F Y h:i A');
+    $message .= " and will last: " . get_post_meta($event_id, 'iievent_duration', true) . "hrs";
 
     wp_mail('', "Here's whats happening at: " . $event->post_title, $message, $headers);
 }
