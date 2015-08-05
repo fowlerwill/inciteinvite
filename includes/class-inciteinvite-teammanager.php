@@ -231,7 +231,7 @@ class InciteInvite_TeamManager extends InciteInvite_TeamUser {
 
         echo '<div class="row nopadding">';
 
-        echo '<div class="page-header">
+        echo '<div class="row page-header">
                 <div class="col-xs-8">
                   <h1>Team Events for ' . $date->format('F, Y') . '</h1>
                 </div>
