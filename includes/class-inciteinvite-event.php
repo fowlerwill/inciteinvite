@@ -266,20 +266,39 @@ class InciteInvite_Event {
      * @param $eventid int ID of the event Post
      */
     public function schedule_invite_email($eventid) {
-        $date = get_post_meta($eventid, 'iievent_date', true);
+        $eventDate = get_post_meta($eventid, 'iievent_date', true);
+        $now = new DateTime();
         $team_id = $this->get_event_team_id($eventid);
-        if(!$date instanceof DateTime) {
+        if(!$eventDate instanceof DateTime) {
             // check if it's a unix timestamp
-            if( is_numeric($date) && (int)$date == $date ) {
-                $date = new DateTime('@' . $date);
+            if( is_numeric($eventDate) && (int)$eventDate == $eventDate ) {
+                $eventDate = new DateTime('@' . $eventDate);
             }
         }
-        // Summary Premption Time
-        $date->sub(new DateInterval('P1D'));
-        wp_schedule_single_event($date->getTimestamp(), 'sendsummaryemail', array($team_id, $eventid));
-        // Invitation Premption Time
-        $date->sub(new DateInterval('P2D'));
-        wp_schedule_single_event($date->getTimestamp(), 'sendinviteemail', array($team_id, $eventid));
+
+        // If there are fewer than 3 days, send the invitation now & the summary 2/3rds of the time
+        // until the eventDate
+        $diff = $eventDate->getTimestamp() - $now->getTimestamp();
+
+        if( $diff < ( 60 * 60 * 24 * 3 ) ) {
+
+            // schedule the invite immediately
+            wp_schedule_single_event($now->getTimestamp(), 'sendinviteemail', array($team_id, $eventid));
+            // divide remaining time into thirds, and schedule the summary after two of those thirds remaining
+            $diff = round( ($diff / 3) * 2 );
+            $summaryDate = new DateTime();
+            $summaryDate->setTimestamp( $now->getTimestamp() + $diff );
+
+            wp_schedule_single_event($summaryDate->getTimestamp(), 'sendsummaryemail', array($team_id, $eventid));
+        } else {
+            wp_die( var_dump($diff), 'else' );
+            // Summary Premption Time
+            $eventDate->sub(new DateInterval('P1D'));
+            wp_schedule_single_event($eventDate->getTimestamp(), 'sendsummaryemail', array($team_id, $eventid));
+            // Invitation Premption Time
+            $eventDate->sub(new DateInterval('P2D'));
+            wp_schedule_single_event($eventDate->getTimestamp(), 'sendinviteemail', array($team_id, $eventid));
+        }
     }
 
     public function update_event($iievent_id, $iievent_title, $iievent_description, $iievent_date, $iievent_duration,
@@ -553,7 +572,7 @@ function send_the_summary_email($team_id, $event_id) {
                 $thoseIn .="\n" . $inCount . ". " . $member->display_name . ": " . $attendance[$member->ID];
             } else if($attendance[$member->ID] == 'out') {
                 $outCount++;
-                $thoseOut .= "\n" . $outCount . ". " . $member->display_name . ": no response.";
+                $thoseOut .= "\n" . $outCount . ". " . $member->display_name . ": " . $attendance[$member->ID];
             } else {
                 $nRCount++;
                 $thoseNR .= "\n" . $nRCount . ". " . $member->display_name . ": no response.";
