@@ -19,8 +19,11 @@ class InciteInvite_Event {
         $attendance = get_post_meta(get_the_ID(), 'iievent_attendance', true);
 
         if( is_numeric($date) && (int)$date == $date ) {
-            $date = new DateTime('@' . $date,
-                new DateTimeZone(InciteInvite_Team::get_team_timezone(wp_get_post_parent_id(get_the_ID()))));
+            $thedate = new DateTime();
+            $thedate->setTimestamp($date);
+            $thedate->setTimezone( new DateTimeZone(
+                InciteInvite_Team::get_team_timezone(wp_get_post_parent_id(get_the_ID()))
+            ));
         }
 
         $inCount = 0;
@@ -32,7 +35,7 @@ class InciteInvite_Event {
                 $outCount++;
         }
 
-        $content .= '<h3>' . $date->format('l jS \of F Y h:i A') . '</h3>';
+        $content .= '<h3>' . $thedate->format('l jS \of F Y h:i A') . '</h3>';
         $content .= '<h4>For: ' . $duration . ' hour</h4>';
         $content .= '<h4>With: <strong>' . $inCount . '</strong> members attending, and <strong>' . $outCount
             . '</strong> unable to attend so far</h4>';
